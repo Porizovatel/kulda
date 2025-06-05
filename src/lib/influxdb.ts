@@ -29,9 +29,12 @@ export const setupInfluxDB = async () => {
     throw new Error('InfluxDB URL and token must be configured in environment variables. Check your .env file.');
   }
 
+  // Ensure URL uses HTTPS
+  const secureUrl = url.replace('http://', 'https://');
+
   // Test connection before proceeding
   try {
-    const response = await fetch(`${url}/health`, {
+    const response = await fetch(`${secureUrl}/health`, {
       headers: {
         'Authorization': `Token ${token}`,
         'Accept': 'application/json'
@@ -48,7 +51,7 @@ export const setupInfluxDB = async () => {
     }
   } catch (error) {
     console.error('InfluxDB health check failed:', error);
-    throw new Error(`Failed to connect to InfluxDB at ${url}. Please check if the server is running and accessible.`);
+    throw new Error(`Failed to connect to InfluxDB at ${secureUrl}. Please check if HTTPS is enabled on your InfluxDB server and the certificate is valid.`);
   }
 
   const orgsApi = new OrgsAPI(influxDB);
