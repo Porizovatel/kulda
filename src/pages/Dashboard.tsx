@@ -86,7 +86,7 @@ const Dashboard: React.FC = () => {
         <div className="mt-4 p-4 bg-blue-50 rounded-lg">
           <p className="text-sm text-blue-700">
             <strong>Tip:</strong> Press F12 or right-click and select "Inspect" to open developer tools.
-            Select the "Console" tab to view detailed error messages.
+            Select the "Console\" tab to view detailed error messages.
           </p>
         </div>
       </div>
