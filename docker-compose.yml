@@ -21,8 +21,6 @@ services:
       - INFLUXD_HTTP_READ_TIMEOUT=30s
       - INFLUXD_HTTP_WRITE_TIMEOUT=30s
       - INFLUXD_HTTP_IDLE_TIMEOUT=3m
-      - INFLUXD_TLS_CERT=/etc/ssl/influxdb-selfsigned.crt
-      - INFLUXD_TLS_KEY=/etc/ssl/influxdb-selfsigned.key
 
   webapp:
     build:
