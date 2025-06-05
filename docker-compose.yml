@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  influxdb:
+    image: influxdb:2.7
+    container_name: kulich_influxdb
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=your_secure_password
+      - DOCKER_INFLUXDB_INIT_ORG=kulich
+      - DOCKER_INFLUXDB_INIT_BUCKET=bowling_league
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=your_secure_token
+      - INFLUXD_HTTP_CORS_ENABLED=true
+      - INFLUXD_HTTP_CORS_ALLOWED_ORIGINS=http://localhost:5173,http://192.168.0.20,http://192.168.0.20:80
+
+  webapp:
+    build:
+      context: .
+      args:
+        - VITE_INFLUXDB_URL=http://influxdb:8086
+        - VITE_INFLUXDB_TOKEN=your_secure_token
+    container_name: kulich_webapp
+    ports:
+      - "80:80"
+    environment:
+      - VITE_INFLUXDB_URL=http://influxdb:8086
+      - VITE_INFLUXDB_TOKEN=your_secure_token
+    depends_on:
+      - influxdb
+
+volumes:
+  influxdb_data:
