@@ -31,17 +31,20 @@ export const setupInfluxDB = async () => {
 
   // Test connection before proceeding
   try {
-    const health = await fetch(`${url}/health`, {
+    const response = await fetch(`${url}/health`, {
       headers: {
         'Authorization': `Token ${token}`,
         'Accept': 'application/json'
-      },
-      mode: 'cors',
-      credentials: 'omit'
+      }
     });
     
-    if (!health.ok) {
-      throw new Error(`InfluxDB health check failed: ${health.statusText}`);
+    if (!response.ok) {
+      throw new Error(`InfluxDB health check failed: ${response.statusText}`);
+    }
+
+    const health = await response.json();
+    if (health.status !== 'pass') {
+      throw new Error('InfluxDB is not healthy');
     }
   } catch (error) {
     console.error('InfluxDB health check failed:', error);
