@@ -72,7 +72,7 @@ def check_cors_headers(url, token):
     }
     
     try:
-        conn.request('OPTIONS', '/api/v2/ping', headers=headers)
+        conn.request('OPTIONS', '/health', headers=headers)
         response = conn.getresponse()
         
         cors_headers = {
