@@ -13,7 +13,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
-RUN npm run build
+RUN VITE_INFLUXDB_URL=${VITE_INFLUXDB_URL} VITE_INFLUXDB_TOKEN=${VITE_INFLUXDB_TOKEN} npm run build
 
 # Production stage
 FROM nginx:alpine
