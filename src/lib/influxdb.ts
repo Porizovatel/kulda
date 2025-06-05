@@ -31,8 +31,7 @@ export const setupInfluxDB = async () => {
 
   // Test connection before proceeding
   try {
-    const response = await fetch(`${url}/api/v2/ping`, {
-      method: 'GET',
+    const response = await fetch(`${url}/health`, {
       headers: {
         'Authorization': `Token ${token}`
       },
@@ -41,7 +40,7 @@ export const setupInfluxDB = async () => {
     });
     
     if (!response.ok) {
-      throw new Error(`InfluxDB ping failed: ${response.statusText}`);
+      throw new Error(`InfluxDB health check failed: ${response.statusText}`);
     }
   } catch (error) {
     console.error('InfluxDB ping failed:', error);
