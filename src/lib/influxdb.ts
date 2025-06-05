@@ -48,6 +48,9 @@ export const setupInfluxDB = async () => {
     }
   } catch (error) {
     console.error('InfluxDB health check failed:', error);
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      throw new Error(`Failed to connect to InfluxDB at ${url}. If you're accessing the site over HTTPS, make sure InfluxDB is also configured with HTTPS.`);
+    }
     throw new Error(`Failed to connect to InfluxDB at ${url}. Please check if the server is running and accessible.`);
   }
 
