@@ -1,37 +1,12 @@
 version: '3.8'
 
 services:
-  influxdb:
-    image: influxdb:2.7
-    container_name: kulich_influxdb
-    ports:
-      - "8086:8086"
-    volumes:
-      - influxdb_data:/var/lib/influxdb2
-      - ./certs:/etc/ssl/certs
-    environment:
-      - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=your_secure_password
-      - DOCKER_INFLUXDB_INIT_ORG=kulich
-      - DOCKER_INFLUXDB_INIT_BUCKET=bowling_league
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=your_secure_token
-      - INFLUXD_HTTP_CORS_ENABLED=true
-      - INFLUXD_HTTP_CORS_ALLOWED_ORIGINS=*
-      - INFLUXD_HTTP_BIND_ADDRESS=:8086
-      - INFLUXD_HTTP_READ_TIMEOUT=30s
-      - INFLUXD_HTTP_WRITE_TIMEOUT=30s
-      - INFLUXD_HTTP_IDLE_TIMEOUT=3m
-      - INFLUXD_TLS_CERT=/etc/ssl/certs/influxdb.crt
-      - INFLUXD_TLS_KEY=/etc/ssl/certs/influxdb.key
-      - INFLUXD_TLS_STRICT_CIPHERS=true
-
   webapp:
     build:
       context: .
       args:
-        - VITE_INFLUXDB_URL=https://influxdb:8086
-        - VITE_INFLUXDB_TOKEN=your_secure_token
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
     container_name: kulich_webapp
     ports:
       - "80:80"
@@ -39,10 +14,5 @@ services:
     volumes:
       - ./certs:/etc/nginx/certs
     environment:
-      - VITE_INFLUXDB_URL=https://influxdb:8086
-      - VITE_INFLUXDB_TOKEN=your_secure_token
-    depends_on:
-      - influxdb
-
-volumes:
-  influxdb_data:
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
