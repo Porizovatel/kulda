@@ -1,14 +1,16 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Trophy, Users, UserCircle, BarChart, Home, Table2, Calendar, UserCog } from 'lucide-react';
+import { Trophy, Users, UserCircle, BarChart, Home, Table2, Calendar, UserCog, Download } from 'lucide-react';
 import { useDatabase } from '../context/InfluxDatabaseContext';
 import { useAuth } from '../context/LocalAuthContext';
 import UserMenu from './UserMenu';
+import ImportModal from './ImportModal';
 
 const Layout: React.FC = () => {
   const location = useLocation();
   const { isLoaded } = useDatabase();
   const { isAdmin, isManager } = useAuth();
+  const [showImportModal, setShowImportModal] = React.useState(false);
 
   // Základní navigace dostupná všem přihlášeným uživatelům
   let navigation = [
@@ -55,6 +57,7 @@ const Layout: React.FC = () => {
         <div className="w-64 bg-blue-800 text-white">
           <div className="p-4">
             <h1 className="text-2xl font-bold">KuLiCh</h1>
+            <p className="text-blue-200 text-sm mt-1">Kuželkářská Liga Chrástu</p>
           </div>
           <nav className="mt-5">
             {navigation.map((item) => (
@@ -73,6 +76,17 @@ const Layout: React.FC = () => {
                 {item.name}
               </Link>
             ))}
+            
+            {/* Import/Export pro správce */}
+            {isManager() && (
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="w-full flex items-center px-4 py-3 text-sm font-medium text-blue-100 hover:bg-blue-700 transition duration-150 ease-in-out"
+              >
+                <Download className="mr-3 h-5 w-5" />
+                Import/Export
+              </button>
+            )}
           </nav>
         </div>
 
@@ -103,6 +117,17 @@ const Layout: React.FC = () => {
           </main>
         </div>
       </div>
+      
+      {/* Import/Export Modal */}
+      {showImportModal && (
+        <ImportModal
+          onClose={() => setShowImportModal(false)}
+          onComplete={() => {
+            setShowImportModal(false);
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 };

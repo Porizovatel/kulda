@@ -24,7 +24,6 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0',
-    port: 5173,
-    allowedHosts: ['all', '5173-i4fftykunelb2angor24s-ed376d5e.e2b.dev']
+    port: 5173
   }
 });

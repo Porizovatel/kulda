@@ -121,10 +121,11 @@ export interface PlayerHistory {
 // User role
 export type UserRole = 'admin' | 'manager' | 'reader';
 
-// User entity
-export interface User {
-  id: string;
+// Local user entity for IndexedDB
+export interface LocalUser {
+  id?: number;
   email: string;
+  password: string;
   role: UserRole;
-  createdAt?: Date;
+  createdAt: Date;
 }

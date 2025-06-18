@@ -1,6 +1,6 @@
 # KuLiCh - Kuželkářská Liga Chrástu
 
-Webová aplikace pro správu kuželkářské ligy s podporou InfluxDB běžící na Synology NAS.
+Webová aplikace pro správu kuželkářské ligy s lokální databází.
 
 ## Funkcionalita
 
@@ -10,166 +10,139 @@ Aplikace podporuje tři uživatelské role:
 2. **Správce** - může editovat týmy, hráče, zápasy, výsledky a rozpisy  
 3. **Čtenář** - má přístup jen ke čtení informací
 
-## Požadavky
+## Technologie
 
-- Synology NAS s DSM 7.2.2
-- Container Manager (Docker) nainstalovaný
-- Node.js 18+ pro vývoj
-- InfluxDB 2.x
+- **Frontend:** React 18 + TypeScript + Tailwind CSS
+- **Databáze:** IndexedDB (lokální databáze v prohlížeči)
+- **Autentifikace:** Lokální systém s hashovanými hesly
+- **Build:** Vite
+- **Ikony:** Lucide React
 
-## Krok za krokem - Instalace na Synology NAS
+## Instalace a spuštění
 
-### 1. Instalace InfluxDB na Synology NAS
+### Požadavky
 
-1. **Otevřete Container Manager** v DSM
-2. **Registry** → Vyhledejte "influxdb" → Stáhněte "influxdb:2.7-alpine"
-3. **Image** → Vyberte stažený obraz → **Launch**
-4. **Obecné nastavení:**
-   - Název kontejneru: `influxdb-kulich`
-   - Povolit automatický restart
-5. **Pokročilé nastavení:**
-   - **Porty:** Místní port 8086 → Port kontejneru 8086
-   - **Svazky:** Vytvořte novou složku `/docker/influxdb` a namapujte na `/var/lib/influxdb2`
-   - **Proměnné prostředí:**
-     ```
-     DOCKER_INFLUXDB_INIT_MODE=setup
-     DOCKER_INFLUXDB_INIT_USERNAME=admin
-     DOCKER_INFLUXDB_INIT_PASSWORD=AdminPassword123
-     DOCKER_INFLUXDB_INIT_ORG=kulich
-     DOCKER_INFLUXDB_INIT_BUCKET=bowling_league
-     DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=your-super-secret-token-here
-     ```
-6. **Spustit** kontejner
+- Node.js 18+
+- npm nebo yarn
 
-### 2. Ověření InfluxDB
-
-1. Otevřete webový prohlížeč a jděte na `http://IP_VAŠEHO_NAS:8086`
-2. Přihlaste se pomocí:
-   - Uživatel: `admin`
-   - Heslo: `AdminPassword123`
-3. Ověřte, že organizace "kulich" a bucket "bowling_league" existují
-
-### 3. Příprava aplikace
-
-#### Stažení a konfigurace
+### Lokální vývoj
 
 ```bash
-# Klonování nebo stažení projektu
-git clone <url_repozitáře> kulich-app
+# Klonování projektu
+git clone <url_repozitáře>
 cd kulich-app
 
 # Instalace závislostí
 npm install
 
-# Vytvoření konfiguračního souboru
-cp .env.example .env
-```
-
-#### Konfigurace .env souboru
-
-```bash
-# Upravte .env soubor s IP adresou vašeho NAS
-VITE_INFLUXDB_URL=http://192.168.1.100:8086
-VITE_INFLUXDB_TOKEN=your-super-secret-token-here
-```
-
-**Poznámka:** Nahraďte `192.168.1.100` skutečnou IP adresou vašeho NAS a `your-super-secret-token-here` tokenem z kroku 1.
-
-### 4. Vývoj a testování
-
-```bash
 # Spuštění vývojového serveru
 npm run dev
 
 # Aplikace bude dostupná na http://localhost:5173
 ```
 
-### 5. Produkční nasazení na NAS
-
-#### Možnost A: Přímé nasazení
+### Produkční build
 
 ```bash
 # Sestavení aplikace
 npm run build
 
-# Zkopírování do Web Station
-# Zkopírujte obsah složky 'dist' do složky webu na NAS
-# Například do /volume1/web/kulich/
+# Náhled produkční verze
+npm run preview
 ```
 
-#### Možnost B: Docker kontejner
+## První přihlášení
 
-1. **Vytvořte Dockerfile:**
+Při prvním spuštění aplikace se automaticky vytvoří výchozí admin účet:
 
-```dockerfile
-FROM nginx:alpine
-COPY dist/ /usr/share/nginx/html/
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-```
+- **Email:** admin@kulich.cz
+- **Heslo:** admin123
 
-2. **V Container Manager:**
-   - Importujte projekt jako Docker image
-   - Nastavte port 80 → 3000 (nebo jiný volný port)
-   - Spustit kontejner
+**DŮLEŽITÉ:** Ihned změňte heslo po prvním přihlášení!
 
-### 6. Síťové nastavení
+## Struktura aplikace
 
-1. **Firewall:** Zajistěte, že porty 8086 (InfluxDB) a 3000 (aplikace) jsou povoleny
-2. **DHCP rezervace:** Doporučujeme nastavit statickou IP pro NAS
-3. **Port forwarding:** Pokud chcete přístup z internetu, nastavte port forwarding na routeru
+### Databáze
 
-### 7. První přihlášení
+Aplikace používá IndexedDB pro lokální ukládání dat:
 
-1. Otevřete aplikaci v prohlížeči
-2. Výchozí admin účet:
-   - Email: `admin@kulich.cz`
-   - Heslo: `admin123`
-3. **DŮLEŽITÉ:** Ihned změňte heslo po prvním přihlášení
+- **teams** - informace o týmech
+- **players** - hráči a jejich historie
+- **matches** - zápasy a výsledky
+- **seasons** - sezóny
+- **users** - uživatelé a jejich role
+- **sessions** - přihlašovací relace
 
-### 8. Konfigurace týmů a sezón
+### Komponenty
 
-1. Přihlaste se jako admin
-2. Vytvořte novou sezónu
-3. Přidejte týmy a hráče
-4. Nastavte rozpis zápasů
+- **Layout** - hlavní rozložení s navigací
+- **RouteGuards** - ochrana tras podle rolí
+- **Modály** - formuláře pro přidávání/editaci dat
+- **ImportModal** - import/export dat
+
+### Stránky
+
+- **Dashboard** - přehled statistik
+- **Teams** - správa týmů
+- **Players** - správa hráčů
+- **Matches** - správa zápasů
+- **Schedule** - rozpis zápasů
+- **Standings** - ligová tabulka
+- **PlayerStats** - statistiky hráčů
+- **Users** - správa uživatelů (pouze admin)
+
+## Funkce
+
+### Správa týmů
+- Přidávání/editace týmů
+- Nastavení hracích časů
+- Správa hráčů v týmu
+
+### Správa zápasů
+- Ruční přidávání zápasů
+- Automatické generování rozpisu
+- Zadávání výsledků
+- Výpočet bodů podle pravidel
+
+### Statistiky
+- Ligová tabulka
+- Statistiky hráčů
+- Přehledy výkonů
+
+### Import/Export
+- Export dat do Excel souboru
+- Import dat z Excel souboru
+- Záloha celé databáze
+
+## Pravidla bodování
+
+### Body za zápas
+- **Výhra:** 2 body
+- **Remíza:** 1 bod  
+- **Prohra:** 0 bodů
+
+### Pomocné body
+- Výhry v duelech hráčů (2 body za každý)
+- Porovnání celkového počtu kuželek (2 body)
+
+### Pořadí při rovnosti bodů
+1. Nejvyšší počet pomocných bodů
+2. Nejvyšší průměr kuželek na zápas
+
+## Bezpečnost
+
+- Lokální autentifikace s hashovanými hesly
+- Role-based přístup k funkcím
+- Automatické odhlášení po vypršení relace
+- Ochrana tras podle uživatelských rolí
 
 ## Údržba
 
-### Zálohování
+### Záloha dat
+Použijte funkci Export v aplikaci pro vytvoření zálohy všech dat.
 
-```bash
-# Záloha InfluxDB dat
-docker exec influxdb-kulich influx backup /backup
-```
-
-### Čištění logů
-
-```bash
-# V Container Manager → Vyberte kontejner → Logy → Vymazat
-```
-
-### Monitoring
-
-- Sledujte využití paměti a CPU v Container Manager
-- Kontrolujte logy InfluxDB kontejneru
-
-## Řešení problémů
-
-### InfluxDB se nespustí
-- Zkontrolujte logy kontejneru
-- Ověřte, že port 8086 není obsazen
-- Zkontrolujte oprávnění složky `/docker/influxdb`
-
-### Aplikace se nemůže připojit k InfluxDB
-- Ověřte IP adresu v .env souboru
-- Zkontrolujte firewall nastavení
-- Ověřte, že InfluxDB kontejner běží
-
-### Pomalé načítání
-- Zkontrolujte síťové připojení
-- Možná potřebujete více RAM pro NAS
-- Zvažte SSD cache pro Docker
+### Čištění dat
+Aplikace automaticky čistí vypršené přihlašovací relace.
 
 ## Podpora
 
