@@ -1,6 +1,19 @@
 # KuLiCh - Kuželkářská Liga Chrástu
 
-Webová aplikace pro správu kuželkářské ligy s lokální databází.
+Webová aplikace pro správu kuželkářské ligy s MariaDB databází na Synology NAS.
+
+## Architektura
+
+### Frontend
+- **React 18** + TypeScript + Tailwind CSS
+- **Lokální fallback:** IndexedDB (Dexie) pro offline režim
+- **API komunikace:** REST API s JWT autentifikací
+
+### Backend
+- **Node.js** + Express + TypeScript
+- **Databáze:** MariaDB na Synology NAS
+- **Autentifikace:** JWT tokeny s bcrypt hashováním
+- **Bezpečnost:** Helmet, CORS, Rate limiting
 
 ## Funkcionalita
 
@@ -10,109 +23,110 @@ Aplikace podporuje tři uživatelské role:
 2. **Správce** - může editovat týmy, hráče, zápasy, výsledky a rozpisy  
 3. **Čtenář** - má přístup jen ke čtení informací
 
-## Technologie
+### Hlavní funkce
+- ✅ Správa týmů a hráčů
+- ✅ Automatické generování rozpisu zápasů
+- ✅ Zadávání výsledků a výpočet bodování
+- ✅ Ligová tabulka a statistiky hráčů
+- ✅ Import/Export dat do Excel
+- ✅ Kalendářní zobrazení zápasů
+- ✅ Role-based přístupová práva
 
-- **Frontend:** React 18 + TypeScript + Tailwind CSS
-- **Databáze:** IndexedDB (lokální databáze v prohlížeči)
-- **Autentifikace:** Lokální systém s hashovanými hesly
-- **Build:** Vite
-- **Ikony:** Lucide React
-
-## Instalace a spuštění
+## Instalace
 
 ### Požadavky
+- **Node.js 18+**
+- **Synology NAS** s MariaDB
+- **npm** nebo yarn
 
-- Node.js 18+
-- npm nebo yarn
-
-### Lokální vývoj
-
+### 1. Klonování a instalace
 ```bash
-# Klonování projektu
 git clone <url_repozitáře>
 cd kulich-app
 
-# Instalace závislostí
-npm install
-
-# Spuštění vývojového serveru
-npm run dev
-
-# Aplikace bude dostupná na http://localhost:5173
+# Instalace všech závislostí (frontend + backend)
+npm run setup
 ```
 
-### Produkční build
+### 2. Konfigurace MariaDB na Synology NAS
+Postupujte podle detailního návodu v souboru `INSTALACE_MARIADB.md`
 
+### 3. Konfigurace backend serveru
 ```bash
-# Sestavení aplikace
+cd backend
+cp .env.example .env
+# Upravte .env soubor s vašimi údaji
+```
+
+### 4. Spuštění migrací databáze
+```bash
+npm run backend:migrate
+```
+
+### 5. Spuštění aplikace
+
+#### Vývojové prostředí
+```bash
+# Terminal 1: Backend server
+npm run backend:dev
+
+# Terminal 2: Frontend aplikace
+npm run dev
+```
+
+#### Produkční prostředí
+```bash
+# Sestavení backend
+npm run backend:build
+
+# Spuštění backend
+npm run backend:start
+
+# Sestavení frontend
 npm run build
 
-# Náhled produkční verze
-npm run preview
+# Frontend bude v složce dist/
 ```
 
 ## První přihlášení
 
-Při prvním spuštění aplikace se automaticky vytvoří výchozí admin účet:
+Po spuštění migrací se automaticky vytvoří výchozí admin účet:
 
 - **Email:** admin@kulich.cz
 - **Heslo:** admin123
 
 **DŮLEŽITÉ:** Ihned změňte heslo po prvním přihlášení!
 
-## Struktura aplikace
+## API Endpoints
 
-### Databáze
+### Autentifikace
+- `POST /api/auth/register` - Registrace nového uživatele
+- `POST /api/auth/login` - Přihlášení
+- `GET /api/auth/verify` - Ověření tokenu
 
-Aplikace používá IndexedDB pro lokální ukládání dat:
+### Týmy
+- `GET /api/teams` - Seznam všech týmů
+- `GET /api/teams/:id` - Detail týmu
+- `POST /api/teams` - Vytvoření týmu (admin/manager)
+- `PUT /api/teams/:id` - Aktualizace týmu (admin/manager)
+- `DELETE /api/teams/:id` - Smazání týmu (admin/manager)
 
-- **teams** - informace o týmech
-- **players** - hráči a jejich historie
-- **matches** - zápasy a výsledky
-- **seasons** - sezóny
-- **users** - uživatelé a jejich role
-- **sessions** - přihlašovací relace
+### Další endpoints
+- Hráči: `/api/players`
+- Zápasy: `/api/matches`
+- Sezóny: `/api/seasons`
+- Statistiky: `/api/stats`
 
-### Komponenty
+## Databázové schéma
 
-- **Layout** - hlavní rozložení s navigací
-- **RouteGuards** - ochrana tras podle rolí
-- **Modály** - formuláře pro přidávání/editaci dat
-- **ImportModal** - import/export dat
-
-### Stránky
-
-- **Dashboard** - přehled statistik
-- **Teams** - správa týmů
-- **Players** - správa hráčů
-- **Matches** - správa zápasů
-- **Schedule** - rozpis zápasů
-- **Standings** - ligová tabulka
-- **PlayerStats** - statistiky hráčů
-- **Users** - správa uživatelů (pouze admin)
-
-## Funkce
-
-### Správa týmů
-- Přidávání/editace týmů
-- Nastavení hracích časů
-- Správa hráčů v týmu
-
-### Správa zápasů
-- Ruční přidávání zápasů
-- Automatické generování rozpisu
-- Zadávání výsledků
-- Výpočet bodů podle pravidel
-
-### Statistiky
-- Ligová tabulka
-- Statistiky hráčů
-- Přehledy výkonů
-
-### Import/Export
-- Export dat do Excel souboru
-- Import dat z Excel souboru
-- Záloha celé databáze
+### Hlavní tabulky
+- **users** - Uživatelé a jejich role
+- **teams** - Týmy a jejich rozpisy
+- **players** - Hráči a jejich historie
+- **matches** - Zápasy a jejich stav
+- **player_performances** - Výkony hráčů v zápasech
+- **team_performances** - Výkony týmů v zápasech
+- **seasons** - Sezóny ligy
 
 ## Pravidla bodování
 
@@ -131,18 +145,59 @@ Aplikace používá IndexedDB pro lokální ukládání dat:
 
 ## Bezpečnost
 
-- Lokální autentifikace s hashovanými hesly
-- Role-based přístup k funkcím
-- Automatické odhlášení po vypršení relace
-- Ochrana tras podle uživatelských rolí
+- **JWT autentifikace** s bcrypt hashováním hesel
+- **Role-based přístup** k funkcím
+- **Rate limiting** proti útokům
+- **CORS ochrana** pro API
+- **Helmet.js** pro HTTP security headers
+- **Input validace** pomocí express-validator
 
-## Údržba
+## Záloha a obnova dat
 
-### Záloha dat
-Použijte funkci Export v aplikaci pro vytvoření zálohy všech dat.
+### Export dat
+Aplikace umožňuje export všech dat do Excel souboru přes UI.
 
-### Čištění dat
-Aplikace automaticky čistí vypršené přihlašovací relace.
+### Záloha databáze
+```bash
+# Export databáze
+mysqldump -h NAS_IP -u kulich_user -p kulich_db > backup.sql
+
+# Import databáze
+mysql -h NAS_IP -u kulich_user -p kulich_db < backup.sql
+```
+
+## Řešení problémů
+
+### Časté problémy
+1. **Připojení k databázi** - Zkontrolujte firewall a síťová nastavení
+2. **CORS chyby** - Ověřte FRONTEND_URL v .env souboru
+3. **JWT chyby** - Vygenerujte nový JWT_SECRET
+
+### Logy
+- **Backend logy:** Konzole kde běží `npm run backend:dev`
+- **Frontend logy:** Developer Tools v prohlížeči
+- **Databázové logy:** MariaDB logy na Synology NAS
+
+## Vývoj
+
+### Struktura projektu
+```
+kulich-app/
+├── src/                 # Frontend React aplikace
+├── backend/             # Backend Node.js server
+│   ├── src/
+│   │   ├── config/      # Konfigurace databáze
+│   │   ├── middleware/  # Express middleware
+│   │   ├── routes/      # API routes
+│   │   └── migrations/  # Databázové migrace
+├── INSTALACE_MARIADB.md # Návod na instalaci
+└── README.md
+```
+
+### Přidání nových funkcí
+1. **Backend:** Přidejte nové routes do `backend/src/routes/`
+2. **Frontend:** Vytvořte nové komponenty v `src/components/`
+3. **Databáze:** Vytvořte nové migrace v `backend/src/migrations/`
 
 ## Podpora
 
