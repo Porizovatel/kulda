@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  kulich-app:
+    build: .
+    container_name: kulich-app
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - DB_TYPE=sqlite
+      - DB_PATH=/app/data/kulich.db
+      - JWT_SECRET=${JWT_SECRET:-your_very_secure_jwt_secret_key_here}
+      - JWT_EXPIRES_IN=7d
+      - FRONTEND_URL=http://localhost:3001
+    volumes:
+      # Persist database
+      - kulich_data:/app/data
+      # Serve frontend static files
+      - ./dist:/app/frontend:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  kulich_data:
+    driver: local

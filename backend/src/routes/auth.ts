@@ -2,7 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
-import { pool } from '../config/database';
+import { getDatabase } from '../config/database';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
@@ -21,12 +21,13 @@ router.post('/register', [
     const { email, password } = req.body;
 
     // Kontrola existence uživatele
-    const [existingUsers] = await pool.execute(
+    const db = await getDatabase();
+    const existingUser = await db.get(
       'SELECT id FROM users WHERE email = ?',
       [email]
     );
 
-    if ((existingUsers as any[]).length > 0) {
+    if (existingUser) {
       return res.status(400).json({ error: 'Uživatel s tímto emailem již existuje' });
     }
 
@@ -35,12 +36,12 @@ router.post('/register', [
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
     // Vytvoření uživatele
-    const [result] = await pool.execute(
+    const result = await db.run(
       'INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)',
       [email, passwordHash, 'reader']
     );
 
-    const userId = (result as any).insertId;
+    const userId = result.lastID;
 
     // Generování JWT tokenu
     const token = jwt.sign(
@@ -74,17 +75,15 @@ router.post('/login', [
     const { email, password } = req.body;
 
     // Najít uživatele
-    const [users] = await pool.execute(
+    const db = await getDatabase();
+    const user = await db.get(
       'SELECT id, email, password_hash, role FROM users WHERE email = ?',
       [email]
     );
 
-    const userArray = users as any[];
-    if (userArray.length === 0) {
+    if (!user) {
       return res.status(401).json({ error: 'Neplatné přihlašovací údaje' });
     }
-
-    const user = userArray[0];
 
     // Ověření hesla
     const isValidPassword = await bcrypt.compare(password, user.password_hash);

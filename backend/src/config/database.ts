@@ -1,32 +1,82 @@
-import mysql from 'mysql2/promise';
+import sqlite3 from 'sqlite3';
+import { Database, open } from 'sqlite';
 import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
 
 dotenv.config();
 
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '3306'),
-  user: process.env.DB_USER || 'kulich_user',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'kulich_db',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  acquireTimeout: 60000,
-  timeout: 60000,
-  reconnect: true
+let db: Database<sqlite3.Database, sqlite3.Statement> | null = null;
+
+const dbPath = process.env.DB_PATH || path.join(__dirname, '../../data/kulich.db');
+
+// Ensure data directory exists
+const dataDir = path.dirname(dbPath);
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+export const getDatabase = async (): Promise<Database<sqlite3.Database, sqlite3.Statement>> => {
+  if (!db) {
+    db = await open({
+      filename: dbPath,
+      driver: sqlite3.Database
+    });
+    
+    // Enable foreign keys
+    await db.exec('PRAGMA foreign_keys = ON');
+    await db.exec('PRAGMA journal_mode = WAL');
+  }
+  
+  return db;
 };
 
-export const pool = mysql.createPool(dbConfig);
-
-export const testConnection = async () => {
+export const testConnection = async (): Promise<boolean> => {
   try {
-    const connection = await pool.getConnection();
-    console.log('✅ Připojení k MariaDB úspěšné');
-    connection.release();
+    const database = await getDatabase();
+    await database.get('SELECT 1');
+    console.log('✅ Připojení k SQLite úspěšné');
     return true;
   } catch (error) {
-    console.error('❌ Chyba připojení k MariaDB:', error);
+    console.error('❌ Chyba připojení k SQLite:', error);
     return false;
+  }
+};
+
+// Compatibility layer for MySQL-like queries
+export const pool = {
+  async execute(query: string, params: any[] = []): Promise<[any[], any]> {
+    const database = await getDatabase();
+    
+    // Convert MySQL syntax to SQLite
+    let sqliteQuery = query
+      .replace(/AUTO_INCREMENT/gi, 'AUTOINCREMENT')
+      .replace(/INT AUTO_INCREMENT/gi, 'INTEGER')
+      .replace(/CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP/gi, 'CURRENT_TIMESTAMP')
+      .replace(/ENUM\([^)]+\)/gi, 'TEXT')
+      .replace(/TINYINT/gi, 'INTEGER')
+      .replace(/DATETIME/gi, 'TEXT')
+      .replace(/TIMESTAMP/gi, 'TEXT')
+      .replace(/VARCHAR\(\d+\)/gi, 'TEXT')
+      .replace(/TEXT NOT NULL UNIQUE/gi, 'TEXT UNIQUE NOT NULL');
+    
+    try {
+      if (sqliteQuery.trim().toUpperCase().startsWith('INSERT')) {
+        const result = await database.run(sqliteQuery, params);
+        return [{ insertId: result.lastID, affectedRows: result.changes }, {}];
+      } else if (sqliteQuery.trim().toUpperCase().startsWith('UPDATE') || 
+                 sqliteQuery.trim().toUpperCase().startsWith('DELETE')) {
+        const result = await database.run(sqliteQuery, params);
+        return [{ affectedRows: result.changes }, {}];
+      } else {
+        const rows = await database.all(sqliteQuery, params);
+        return [rows, {}];
+      }
+    } catch (error) {
+      console.error('SQLite query error:', error);
+      console.error('Query:', sqliteQuery);
+      console.error('Params:', params);
+      throw error;
+    }
   }
 };

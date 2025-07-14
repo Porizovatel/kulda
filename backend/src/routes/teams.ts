@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import { pool } from '../config/database';
+import { getDatabase } from '../config/database';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
@@ -8,14 +8,15 @@ const router = express.Router();
 // Získat všechny týmy
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const [rows] = await pool.execute(`
+    const db = await getDatabase();
+    const teams = await db.all(`
       SELECT id, name, venue, day_of_week, time_start, time_end, 
              start_date, end_date, created_at, updated_at
       FROM teams 
       ORDER BY name
     `);
     
-    const teams = (rows as any[]).map(team => ({
+    const formattedTeams = teams.map(team => ({
       id: team.id,
       name: team.name,
       venue: team.venue,
@@ -30,7 +31,7 @@ router.get('/', authenticateToken, async (req, res) => {
       updatedAt: team.updated_at
     }));
     
-    res.json(teams);
+    res.json(formattedTeams);
   } catch (error) {
     console.error('Chyba při načítání týmů:', error);
     res.status(500).json({ error: 'Interní chyba serveru' });
@@ -42,19 +43,18 @@ router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
-    const [rows] = await pool.execute(`
+    const db = await getDatabase();
+    const team = await db.get(`
       SELECT id, name, venue, day_of_week, time_start, time_end, 
              start_date, end_date, created_at, updated_at
       FROM teams 
       WHERE id = ?
     `, [id]);
     
-    const teams = rows as any[];
-    if (teams.length === 0) {
+    if (!team) {
       return res.status(404).json({ error: 'Tým nenalezen' });
     }
     
-    const team = teams[0];
     const formattedTeam = {
       id: team.id,
       name: team.name,
@@ -96,7 +96,8 @@ router.post('/', [
 
     const { name, venue, schedule, startDate, endDate } = req.body;
 
-    const [result] = await pool.execute(`
+    const db = await getDatabase();
+    const result = await db.run(`
       INSERT INTO teams (name, venue, day_of_week, time_start, time_end, start_date, end_date)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `, [
@@ -109,7 +110,7 @@ router.post('/', [
       endDate || null
     ]);
 
-    const teamId = (result as any).insertId;
+    const teamId = result.lastID;
     
     res.status(201).json({
       message: 'Tým vytvořen úspěšně',
@@ -141,10 +142,11 @@ router.put('/:id', [
     const { id } = req.params;
     const { name, venue, schedule, startDate, endDate } = req.body;
 
-    const [result] = await pool.execute(`
+    const db = await getDatabase();
+    const result = await db.run(`
       UPDATE teams 
       SET name = ?, venue = ?, day_of_week = ?, time_start = ?, time_end = ?, 
-          start_date = ?, end_date = ?, updated_at = CURRENT_TIMESTAMP
+          start_date = ?, end_date = ?
       WHERE id = ?
     `, [
       name,
@@ -157,7 +159,7 @@ router.put('/:id', [
       id
     ]);
 
-    if ((result as any).affectedRows === 0) {
+    if (result.changes === 0) {
       return res.status(404).json({ error: 'Tým nenalezen' });
     }
 
@@ -177,18 +179,19 @@ router.delete('/:id', [
     const { id } = req.params;
 
     // Kontrola závislostí
-    const [playerCount] = await pool.execute(
+    const db = await getDatabase();
+    const playerCount = await db.get(
       'SELECT COUNT(*) as count FROM players WHERE team_id = ?',
       [id]
     );
     
-    const [matchCount] = await pool.execute(
+    const matchCount = await db.get(
       'SELECT COUNT(*) as count FROM matches WHERE home_team_id = ? OR away_team_id = ?',
       [id, id]
     );
 
-    const players = (playerCount as any[])[0].count;
-    const matches = (matchCount as any[])[0].count;
+    const players = playerCount.count;
+    const matches = matchCount.count;
 
     if (players > 0 || matches > 0) {
       return res.status(400).json({ 
@@ -196,9 +199,9 @@ router.delete('/:id', [
       });
     }
 
-    const [result] = await pool.execute('DELETE FROM teams WHERE id = ?', [id]);
+    const result = await db.run('DELETE FROM teams WHERE id = ?', [id]);
 
-    if ((result as any).affectedRows === 0) {
+    if (result.changes === 0) {
       return res.status(404).json({ error: 'Tým nenalezen' });
     }
 

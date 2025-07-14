@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { pool } from '../config/database';
+import { getDatabase } from '../config/database';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -22,17 +22,17 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
     
     // Ověření existence uživatele v databázi
-    const [rows] = await pool.execute(
+    const db = await getDatabase();
+    const user = await db.get(
       'SELECT id, email, role FROM users WHERE id = ?',
       [decoded.userId]
     );
     
-    const users = rows as any[];
-    if (users.length === 0) {
+    if (!user) {
       return res.status(401).json({ error: 'Neplatný token' });
     }
     
-    req.user = users[0];
+    req.user = user;
     next();
   } catch (error) {
     return res.status(403).json({ error: 'Neplatný nebo vypršelý token' });

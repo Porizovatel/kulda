@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { pool } from '../config/database';
+import { getDatabase } from '../config/database';
 
 const runMigrations = async () => {
   try {
@@ -8,6 +8,8 @@ const runMigrations = async () => {
     
     const migrationFile = path.join(__dirname, '001_initial_schema.sql');
     const sql = fs.readFileSync(migrationFile, 'utf8');
+    
+    const db = await getDatabase();
     
     // Rozdělení SQL na jednotlivé příkazy
     const statements = sql
@@ -17,7 +19,7 @@ const runMigrations = async () => {
     
     for (const statement of statements) {
       if (statement.trim()) {
-        await pool.execute(statement);
+        await db.exec(statement);
       }
     }
     
